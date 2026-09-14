@@ -1,0 +1,40 @@
+name: Reset Repository History
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reset History
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+
+          mkdir /tmp/files
+          rsync -a --exclude=.git ./ /tmp/files/
+          rm -rf .git
+          rsync -a --delete /tmp/files/ ./
+          rm -f .github/workflows/reset-history.yml
+
+          git init
+          git branch -M main
+          git config user.name "${{ github.repository_owner }}"
+          git config user.email "${{ github.repository_owner }}@users.noreply.github.com"
+          git add -A
+          git commit -m "Initial commit"
+
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin main
+
+          echo "Done."
